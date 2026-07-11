@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role{
+  DONOR
+  STAFF
+  ADMIN
+}
+
+enum BloodGroup{
+  A_POS
+  A_NEG
+  B_POS
+  B_NEG
+  AB_POS
+  AB_NEG
+  O_POS
+  O_NEG
+}
+
+enum ComponentType {
+  WHOLE_BLOOD
+  PLASMA
+  PLATELETS
+}
+
+enum DonationStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum RequestUrgency {
+  NORMAL
+  URGENT
+  EMERGENCY
+}
+
+enum RequestStatus {
+  PENDING
+  FULFILLED
+  REJECTED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role
+  phone        String?
+  createdAt    DateTime @default(now())
+
+  donorProfile Donor?
+  auditLogs    AuditLog[]
+}
+
+
+model Donor {
+  id                String     @id @default(uuid())
+  userId            String     @unique
+  user              User       @relation(fields: [userId], references: [id])
+  bloodGroup        BloodGroup
+  dateOfBirth       DateTime
+  address           String?
+  latitude          Float?
+  longitude         Float?
+  lastDonationDate  DateTime?
+  eligibilityStatus Boolean    @default(true)
+
+  donations Donation[]
+}
+
+
+model BloodInventory {
+  id              String        @id @default(uuid())
+  bloodGroup      BloodGroup
+  componentType   ComponentType
+  unitsAvailable  Int           @default(0)
+  expiryDate      DateTime
+  storageLocation String?
+  updatedAt       DateTime      @updatedAt
+}
+
+model Donation {
+  id             String         @id @default(uuid())
+  donorId        String
+  donor          Donor          @relation(fields: [donorId], references: [id])
+  scheduledDate  DateTime
+  status         DonationStatus @default(SCHEDULED)
+  unitsCollected Int?
+  componentType  ComponentType?
+  createdAt      DateTime       @default(now())
+}
+
+model BloodRequest {
+  id              String          @id @default(uuid())
+  requesterName   String
+  hospitalName    String
+  bloodGroup      BloodGroup
+  componentType   ComponentType
+  unitsNeeded     Int
+  urgency         RequestUrgency
+  status          RequestStatus   @default(PENDING)
+  latitude        Float?
+  longitude       Float?
+  createdAt       DateTime        @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  entityType String
+  entityId   String?
+  details    Json?
+  createdAt  DateTime @default(now())
+}
